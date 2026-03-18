@@ -1,0 +1,7 @@
+{
+  "name": "Contactos Tucumán - Gestión Logística",
+  "description": "Sistema profesional de gestión de contactos y socios estratégicos para operaciones logísticas de alta eficiencia en Tucumán.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
