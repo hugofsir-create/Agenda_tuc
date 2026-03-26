@@ -40,11 +40,43 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({ darkMode }) => {
             Calico S.A.
           </p>
           
-          <div className={`h-1.5 w-full rounded-full overflow-hidden ${darkMode ? 'bg-slate-800' : 'bg-slate-200'}`}>
+          <div className="relative w-full h-10 flex items-end">
             <div 
-              className="h-full bg-emerald-500 transition-all duration-300 ease-out shadow-[0_0_15px_rgba(16,185,129,0.5)]"
-              style={{ width: `${progress}%` }}
-            />
+              className="absolute bottom-2 transition-all duration-300 ease-out"
+              style={{ 
+                left: `${progress}%`,
+                transform: `translateX(-${progress === 0 ? 0 : 100}%)`,
+                opacity: progress > 0 ? 1 : 0
+              }}
+            >
+              <div className="relative">
+                <svg 
+                  width="24" 
+                  height="24" 
+                  viewBox="0 0 24 24" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  strokeWidth="2.5" 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round" 
+                  className={`${darkMode ? 'text-emerald-400' : 'text-emerald-600'} drop-shadow-[0_0_8px_rgba(16,185,129,0.6)]`}
+                >
+                  <path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/>
+                  <path d="M15 18H9"/>
+                  <path d="M19 18h2a1 1 0 0 0 1-1v-5l-4-4h-3v10"/>
+                  <circle cx="7" cy="18" r="2"/>
+                  <circle cx="17" cy="18" r="2"/>
+                </svg>
+                {/* Exhaust effect */}
+                <div className={`absolute -left-1 bottom-1 w-1 h-1 rounded-full animate-ping ${darkMode ? 'bg-emerald-500/40' : 'bg-emerald-600/40'}`} />
+              </div>
+            </div>
+            <div className={`h-1.5 w-full rounded-full overflow-hidden ${darkMode ? 'bg-slate-800' : 'bg-slate-200'}`}>
+              <div 
+                className="h-full bg-emerald-500 transition-all duration-300 ease-out shadow-[0_0_15px_rgba(16,185,129,0.5)]"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
           </div>
           
           <div className="flex justify-between items-center px-1">
