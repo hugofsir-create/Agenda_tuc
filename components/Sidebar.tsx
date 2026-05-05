@@ -1,17 +1,12 @@
 
 import React from 'react';
-import { User } from '../types';
-
 interface SidebarProps {
   darkMode?: boolean;
   onExportJSON?: () => void;
   onExportCSV?: () => void;
   onImport?: () => void;
-  onLogout?: () => void;
-  onViewUsers?: () => void;
-  onViewContacts?: () => void;
-  currentView: 'contacts' | 'users';
-  userRole?: 'admin' | 'user';
+  onImportExcel?: () => void;
+  currentView: 'contacts';
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ 
@@ -19,11 +14,8 @@ const Sidebar: React.FC<SidebarProps> = ({
   onExportJSON, 
   onExportCSV, 
   onImport, 
-  onLogout, 
-  onViewUsers, 
-  onViewContacts,
-  currentView,
-  userRole
+  onImportExcel,
+  currentView
 }) => {
   return (
     <aside className={`w-64 min-h-screen flex flex-col fixed left-0 top-0 h-full z-20 border-r ${darkMode ? 'bg-[#0a0b0b] border-slate-900' : 'bg-[#1a1c1d] border-transparent'}`}>
@@ -42,20 +34,10 @@ const Sidebar: React.FC<SidebarProps> = ({
         <p className="text-[10px] font-bold uppercase tracking-[0.2em] mb-4 px-4 text-slate-500">Navegación</p>
         
         <button 
-          onClick={onViewContacts} 
           className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-bold text-xs ${currentView === 'contacts' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
         >
           📇 Directorio
         </button>
-
-        {userRole === 'admin' && (
-          <button 
-            onClick={onViewUsers} 
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-bold text-xs ${currentView === 'users' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
-          >
-            👥 Usuarios
-          </button>
-        )}
 
         <p className="text-[10px] font-bold uppercase tracking-[0.2em] mt-8 mb-4 px-4 text-slate-500">Herramientas</p>
         
@@ -68,15 +50,12 @@ const Sidebar: React.FC<SidebarProps> = ({
         </button>
 
         <button onClick={onImport} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-all font-bold text-xs">
-          📂 Cargar Datos
+          📂 Cargar JSON
         </button>
 
-        <div className="pt-4 mt-4 border-t border-white/5">
-          <button onClick={onLogout} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-rose-500 hover:bg-rose-500/10 transition-all font-bold text-xs">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-            Cerrar Sesión
-          </button>
-        </div>
+        <button onClick={onImportExcel} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-all font-bold text-xs">
+          📊 Importar Excel
+        </button>
       </nav>
 
       <div className="p-6">

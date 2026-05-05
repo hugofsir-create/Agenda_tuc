@@ -14,14 +14,6 @@ export interface LogisticsContact {
   lastContacted?: string;
 }
 
-export interface User {
-  id: string;
-  username: string;
-  password: string;
-  role: 'admin' | 'user';
-  name: string;
-}
-
 export interface ContactStats {
   total: number;
 }
