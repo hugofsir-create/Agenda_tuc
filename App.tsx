@@ -11,6 +11,7 @@ import * as XLSX from 'xlsx';
 const App: React.FC = () => {
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('grid');
   const [contacts, setContacts] = useState<LogisticsContact[]>([]);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentContact, setCurrentContact] = useState<LogisticsContact | null>(null);
   const [printingContact, setPrintingContact] = useState<LogisticsContact | null>(null);
@@ -91,7 +92,29 @@ const App: React.FC = () => {
   const handleDeleteContact = (id: string) => {
     if (window.confirm('¿Eliminar este registro?')) {
       setContacts(prev => prev.filter(c => c.id !== id));
+      setSelectedIds(prev => prev.filter(sid => sid !== id));
     }
+  };
+
+  const handleMassiveDelete = () => {
+    if (window.confirm(`¿Eliminar ${selectedIds.length} registros seleccionados?`)) {
+      setContacts(prev => prev.filter(c => !selectedIds.includes(c.id)));
+      setSelectedIds([]);
+    }
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.length === filteredContacts.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(filteredContacts.map(c => c.id));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => 
+      prev.includes(id) ? prev.filter(sid => sid !== id) : [...prev, id]
+    );
   };
 
   const openEditModal = (contact: LogisticsContact) => {
@@ -167,32 +190,39 @@ const App: React.FC = () => {
         const workbook = XLSX.read(data, { type: 'binary' });
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
-        const json = XLSX.utils.sheet_to_json(worksheet);
+        
+        // Usamos header: 1 para obtener un array de arrays (filas por índice)
+        const rows: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
-        if (Array.isArray(json)) {
-          const mappedContacts: LogisticsContact[] = json.map((row: any, index) => {
-            const findValue = (possibleHeaders: string[]) => {
-              const key = Object.keys(row).find(k => 
-                possibleHeaders.some(ph => k.toLowerCase().includes(ph.toLowerCase()))
-              );
-              return key ? String(row[key]) : '';
-            };
+        if (Array.isArray(rows) && rows.length > 0) {
+          // Asumimos que la primera fila pueden ser cabeceras, pero el usuario dio índices específicos
+          // B=1, D=3, L=11, M=12, P=15
+          // Saltamos la primera fila si parece ser de cabeceras (contiene texto)
+          const startIdx = isNaN(Number(rows[0][3])) ? 1 : 0; 
+
+          const mappedContacts: LogisticsContact[] = rows.slice(startIdx).filter(row => row.length > 0).map((row: any, index) => {
+            const getValue = (idx: number) => row[idx] ? String(row[idx]).trim() : '';
 
             return {
               id: `excel-${Date.now()}-${index}`,
-              client: findValue(['Cliente', 'Empresa', 'Compañía', 'Client']),
-              subClient: findValue(['Subcliente', 'Sucursal', 'Subclient']),
-              contactName: findValue(['Contacto', 'Responsable', 'Nombre', 'Contact']),
-              phone: findValue(['Teléfono', 'Celular', 'Phone', 'Tel']),
-              altContactName: findValue(['Contacto Alternativo', 'Alt Contact']),
-              altPhone: findValue(['Teléfono Alternativo', 'Alt Phone']),
-              city: findValue(['Ciudad', 'Localidad', 'Provincia', 'City']),
-              address: findValue(['Dirección', 'Ubicación', 'Address']),
-              unloadingHours: findValue(['Horarios', 'Horas', 'Descarga', 'Hours']),
-              notes: findValue(['Notas', 'Observaciones', 'Notes']),
+              client: getValue(3) || 'S/N Empresa', // Columna D
+              subClient: '', 
+              contactName: getValue(1), // Columna B
+              phone: getValue(15), // Columna P
+              altContactName: '',
+              altPhone: '',
+              city: getValue(12), // Columna M
+              address: getValue(11), // Columna L
+              unloadingHours: '',
+              notes: 'Importado vía Excel (Mapeo Específico)',
               lastContacted: new Date().toISOString().split('T')[0]
             };
           });
+
+          if (mappedContacts.length === 0) {
+            alert('No se encontraron datos en las columnas D, B, P, M, L.');
+            return;
+          }
 
           if (window.confirm(`Se encontraron ${mappedContacts.length} contactos. ¿Desea agregarlos a la lista actual?`)) {
             setContacts(prev => [...prev, ...mappedContacts]);
@@ -254,14 +284,25 @@ const App: React.FC = () => {
         <div className="space-y-6">
           <div className={`p-5 rounded-2xl border ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-sm'}`}>
             <div className="flex flex-col md:flex-row gap-4 justify-between items-center">
-              <div className="relative w-full md:w-96">
-                <input 
-                  type="text"
-                  placeholder="Buscar por empresa, contacto o ciudad..."
-                  className={`w-full pl-4 pr-4 py-2.5 border rounded-xl outline-none transition-all text-sm ${darkMode ? 'bg-slate-950 border-slate-800 text-slate-200 focus:border-emerald-500/50' : 'bg-slate-50 border-slate-200 text-slate-800 focus:border-emerald-300'}`}
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
+              <div className="flex items-center gap-4 w-full md:w-auto">
+                <div className="relative w-full md:w-96">
+                  <input 
+                    type="text"
+                    placeholder="Buscar por empresa, contacto o ciudad..."
+                    className={`w-full pl-4 pr-4 py-2.5 border rounded-xl outline-none transition-all text-sm ${darkMode ? 'bg-slate-950 border-slate-800 text-slate-200 focus:border-emerald-500/50' : 'bg-slate-50 border-slate-200 text-slate-800 focus:border-emerald-300'}`}
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
+                {selectedIds.length > 0 && (
+                  <button 
+                    onClick={handleMassiveDelete}
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white transition-all text-xs font-bold whitespace-nowrap"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                    Eliminar {selectedIds.length}
+                  </button>
+                )}
               </div>
               <div className={`flex p-1 rounded-xl border ${darkMode ? 'bg-slate-950 border-slate-800' : 'bg-slate-100 border-slate-200'}`}>
                 <button onClick={() => setViewMode('table')} className={`px-4 py-1.5 rounded-lg text-xs font-bold ${viewMode === 'table' ? (darkMode ? 'bg-slate-800 text-emerald-400' : 'bg-white text-slate-800') : 'text-slate-500'}`}>Tabla</button>
@@ -273,10 +314,18 @@ const App: React.FC = () => {
           {viewMode === 'table' ? (
             <div className={`rounded-2xl border overflow-hidden ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-sm'}`}>
               <div className="overflow-x-auto">
-                <table className="w-full text-left">
-                  <thead className={`text-[10px] uppercase font-bold tracking-widest ${darkMode ? 'bg-slate-950 text-slate-600' : 'bg-slate-50 text-slate-400'}`}>
-                    <tr>
-                      <th className="px-6 py-4">Empresa</th>
+                  <table className="w-full text-left">
+                    <thead className={`text-[10px] uppercase font-bold tracking-widest ${darkMode ? 'bg-slate-950 text-slate-600' : 'bg-slate-50 text-slate-400'}`}>
+                      <tr>
+                        <th className="px-6 py-4 w-10">
+                          <input 
+                            type="checkbox" 
+                            className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                            checked={selectedIds.length === filteredContacts.length && filteredContacts.length > 0}
+                            onChange={toggleSelectAll}
+                          />
+                        </th>
+                        <th className="px-6 py-4">Empresa</th>
                       <th className="px-6 py-4">Contacto</th>
                       <th className="px-6 py-4">Teléfono</th>
                       <th className="px-6 py-4">Ciudad</th>
@@ -284,10 +333,18 @@ const App: React.FC = () => {
                       <th className="px-6 py-4 text-right">Acciones</th>
                     </tr>
                   </thead>
-                  <tbody className={`divide-y ${darkMode ? 'divide-slate-800' : 'divide-slate-100'}`}>
-                    {filteredContacts.map((c) => (
-                      <tr key={c.id} className={`${darkMode ? 'hover:bg-slate-800/20' : 'hover:bg-slate-50'}`}>
-                        <td className="px-6 py-4 font-bold text-sm">{c.client}</td>
+                    <tbody className={`divide-y ${darkMode ? 'divide-slate-800' : 'divide-slate-100'}`}>
+                      {filteredContacts.map((c) => (
+                        <tr key={c.id} className={`${darkMode ? 'hover:bg-slate-800/20' : 'hover:bg-slate-50'} ${selectedIds.includes(c.id) ? (darkMode ? 'bg-emerald-500/5' : 'bg-emerald-50') : ''}`}>
+                          <td className="px-6 py-4">
+                            <input 
+                              type="checkbox" 
+                              className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                              checked={selectedIds.includes(c.id)}
+                              onChange={() => toggleSelect(c.id)}
+                            />
+                          </td>
+                          <td className="px-6 py-4 font-bold text-sm">{c.client}</td>
                         <td className="px-6 py-4 text-sm">{c.contactName}</td>
                         <td className="px-6 py-4 text-sm">{c.phone}</td>
                         <td className="px-6 py-4 text-sm">{c.city}</td>
@@ -321,9 +378,17 @@ const App: React.FC = () => {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredContacts.map((c) => (
-                <div key={c.id} className={`p-6 rounded-2xl border transition-all ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+                <div key={c.id} className={`p-6 rounded-2xl border transition-all ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'} ${selectedIds.includes(c.id) ? (darkMode ? 'ring-2 ring-emerald-500/50 bg-emerald-500/5' : 'ring-2 ring-emerald-500 bg-emerald-50') : ''}`}>
                   <div className="flex justify-between items-start mb-4">
-                    <h4 className="font-bold text-lg">{c.client}</h4>
+                    <div className="flex items-center gap-3">
+                      <input 
+                        type="checkbox" 
+                        className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                        checked={selectedIds.includes(c.id)}
+                        onChange={() => toggleSelect(c.id)}
+                      />
+                      <h4 className="font-bold text-lg">{c.client}</h4>
+                    </div>
                     <div className="flex gap-2">
                       <button onClick={() => handlePrint(c)} className="p-1.5 rounded-lg hover:bg-slate-500/10 text-slate-500" title="Imprimir Ficha">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
