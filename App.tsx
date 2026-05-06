@@ -294,6 +294,18 @@ const App: React.FC = () => {
                     onChange={(e) => setSearchTerm(e.target.value)}
                   />
                 </div>
+                {filteredContacts.length > 0 && (
+                  <button 
+                    onClick={toggleSelectAll}
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all text-xs font-bold whitespace-nowrap ${
+                      selectedIds.length === filteredContacts.length
+                      ? (darkMode ? 'bg-emerald-500/20 text-emerald-400' : 'bg-emerald-100 text-emerald-700')
+                      : (darkMode ? 'bg-slate-800 text-slate-400' : 'bg-slate-100 text-slate-600')
+                    }`}
+                  >
+                    {selectedIds.length === filteredContacts.length ? 'Desmarcar Todos' : 'Seleccionar Todos'}
+                  </button>
+                )}
                 {selectedIds.length > 0 && (
                   <button 
                     onClick={handleMassiveDelete}
