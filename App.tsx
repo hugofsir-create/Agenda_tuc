@@ -7,8 +7,31 @@ import QRModal from './components/QRModal';
 import LoadingScreen from './components/LoadingScreen';
 import { LogisticsContact } from './types';
 import * as XLSX from 'xlsx';
+import { 
+  auth, 
+  db, 
+  signInWithGoogle, 
+  logout, 
+  onAuthStateChanged, 
+  FirebaseUser,
+  handleFirestoreError,
+  OperationType 
+} from './lib/firebase';
+import { 
+  collection, 
+  onSnapshot, 
+  query, 
+  where, 
+  doc, 
+  setDoc, 
+  deleteDoc, 
+  updateDoc, 
+  serverTimestamp, 
+  writeBatch
+} from 'firebase/firestore';
 
 const App: React.FC = () => {
+  const [user, setUser] = useState<FirebaseUser | null>(null);
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('grid');
   const [contacts, setContacts] = useState<LogisticsContact[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -26,40 +49,33 @@ const App: React.FC = () => {
   });
 
   useEffect(() => {
-    const savedContacts = localStorage.getItem('logicon_contacts');
-    if (savedContacts) {
-      setContacts(JSON.parse(savedContacts));
-    } else {
-      const initialContacts: LogisticsContact[] = [
-        {
-          id: '1',
-          client: 'Ejemplo Logística',
-          subClient: 'Sucursal Centro',
-          contactName: 'Juan Pérez',
-          phone: '555-0123',
-          altContactName: '',
-          altPhone: '',
-          city: 'Tucumán',
-          address: 'Calle Falsa 123',
-          unloadingHours: '08:00 - 18:00',
-          notes: 'Ejemplo de registro local.',
-          lastContacted: new Date().toISOString().split('T')[0]
-        }
-      ];
-      setContacts(initialContacts);
-    }
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      setUser(firebaseUser);
+      if (!firebaseUser) {
+        setContacts([]);
+        setIsLoading(false);
+      }
+    });
+    return () => unsubscribe();
   }, []);
 
   useEffect(() => {
-    localStorage.setItem('logicon_contacts', JSON.stringify(contacts));
-  }, [contacts]);
+    if (!user) return;
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
+    const q = query(collection(db, 'contacts'), where('ownerId', '==', user.uid));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({
+        ...doc.data(),
+        id: doc.id
+      })) as LogisticsContact[];
+      setContacts(data);
       setIsLoading(false);
-    }, 3000);
-    return () => clearTimeout(timer);
-  }, []);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, 'contacts');
+    });
+
+    return () => unsubscribe();
+  }, [user]);
 
   useEffect(() => {
     localStorage.setItem('logicon_theme', darkMode ? 'dark' : 'light');
@@ -79,27 +95,56 @@ const App: React.FC = () => {
     );
   }, [contacts, searchTerm]);
 
-  const handleSaveContact = (contact: LogisticsContact) => {
-    if (currentContact) {
-      setContacts(prev => prev.map(c => c.id === contact.id ? contact : c));
-    } else {
-      setContacts(prev => [...prev, contact]);
+  const handleSaveContact = async (contact: LogisticsContact) => {
+    if (!user) return;
+
+    try {
+      if (currentContact) {
+        const contactRef = doc(db, 'contacts', contact.id);
+        await updateDoc(contactRef, {
+          ...contact,
+          updatedAt: serverTimestamp()
+        });
+      } else {
+        const newContactRef = doc(collection(db, 'contacts'));
+        await setDoc(newContactRef, {
+          ...contact,
+          id: newContactRef.id,
+          ownerId: user.uid,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        });
+      }
+      setIsModalOpen(false);
+      setCurrentContact(null);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, 'contacts');
     }
-    setIsModalOpen(false);
-    setCurrentContact(null);
   };
 
-  const handleDeleteContact = (id: string) => {
+  const handleDeleteContact = async (id: string) => {
     if (window.confirm('¿Eliminar este registro?')) {
-      setContacts(prev => prev.filter(c => c.id !== id));
-      setSelectedIds(prev => prev.filter(sid => sid !== id));
+      try {
+        await deleteDoc(doc(db, 'contacts', id));
+        setSelectedIds(prev => prev.filter(sid => sid !== id));
+      } catch (error) {
+        handleFirestoreError(error, OperationType.DELETE, `contacts/${id}`);
+      }
     }
   };
 
-  const handleMassiveDelete = () => {
+  const handleMassiveDelete = async () => {
     if (window.confirm(`¿Eliminar ${selectedIds.length} registros seleccionados?`)) {
-      setContacts(prev => prev.filter(c => !selectedIds.includes(c.id)));
-      setSelectedIds([]);
+      try {
+        const batch = writeBatch(db);
+        selectedIds.forEach(id => {
+          batch.delete(doc(db, 'contacts', id));
+        });
+        await batch.commit();
+        setSelectedIds([]);
+      } catch (error) {
+        handleFirestoreError(error, OperationType.DELETE, 'contacts (massive)');
+      }
     }
   };
 
@@ -163,15 +208,26 @@ const App: React.FC = () => {
   const handleImportClick = () => fileInputRef.current?.click();
   const handleImportExcelClick = () => excelInputRef.current?.click();
 
-  const handleFileImport = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file) return;
+    if (!file || !user) return;
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
         const json = JSON.parse(e.target?.result as string);
-        if (Array.isArray(json) && window.confirm('¿Reemplazar datos actuales?')) {
-          setContacts(json);
+        if (Array.isArray(json) && window.confirm(`¿Importar ${json.length} registros?`)) {
+          const batch = writeBatch(db);
+          json.forEach((c: any) => {
+            const newRef = doc(collection(db, 'contacts'));
+            batch.set(newRef, {
+              ...c,
+              id: newRef.id,
+              ownerId: user.uid,
+              createdAt: serverTimestamp(),
+              updatedAt: serverTimestamp()
+            });
+          });
+          await batch.commit();
         }
       } catch (err) { alert('Error al leer el archivo.'); }
     };
@@ -181,51 +237,56 @@ const App: React.FC = () => {
 
   const handleExcelImport = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file) return;
+    if (!file || !user) return;
 
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
         const data = e.target?.result;
         const workbook = XLSX.read(data, { type: 'binary' });
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
         
-        // Usamos header: 1 para obtener un array de arrays (filas por índice)
         const rows: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
         if (Array.isArray(rows) && rows.length > 0) {
-          // Asumimos que la primera fila pueden ser cabeceras, pero el usuario dio índices específicos
-          // B=1, D=3, L=11, M=12, P=15
-          // Saltamos la primera fila si parece ser de cabeceras (contiene texto)
           const startIdx = isNaN(Number(rows[0][3])) ? 1 : 0; 
 
-          const mappedContacts: LogisticsContact[] = rows.slice(startIdx).filter(row => row.length > 0).map((row: any, index) => {
+          const mappedContactsData = rows.slice(startIdx).filter(row => row.length > 0).map((row: any) => {
             const getValue = (idx: number) => row[idx] ? String(row[idx]).trim() : '';
-
             return {
-              id: `excel-${Date.now()}-${index}`,
-              client: getValue(3) || 'S/N Empresa', // Columna D
+              client: getValue(3) || 'S/N Empresa',
               subClient: '', 
-              contactName: getValue(1), // Columna B
-              phone: getValue(15), // Columna P
+              contactName: getValue(1), 
+              phone: getValue(15), 
               altContactName: '',
               altPhone: '',
-              city: getValue(12), // Columna M
-              address: getValue(11), // Columna L
+              city: getValue(12), 
+              address: getValue(11), 
               unloadingHours: '',
               notes: 'Importado vía Excel (Mapeo Específico)',
               lastContacted: new Date().toISOString().split('T')[0]
             };
           });
 
-          if (mappedContacts.length === 0) {
+          if (mappedContactsData.length === 0) {
             alert('No se encontraron datos en las columnas D, B, P, M, L.');
             return;
           }
 
-          if (window.confirm(`Se encontraron ${mappedContacts.length} contactos. ¿Desea agregarlos a la lista actual?`)) {
-            setContacts(prev => [...prev, ...mappedContacts]);
+          if (window.confirm(`Se encontraron ${mappedContactsData.length} contactos. ¿Desea agregarlos a Firebase?`)) {
+            const batch = writeBatch(db);
+            mappedContactsData.forEach(data => {
+              const newRef = doc(collection(db, 'contacts'));
+              batch.set(newRef, {
+                ...data,
+                id: newRef.id,
+                ownerId: user.uid,
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp()
+              });
+            });
+            await batch.commit();
           }
         }
       } catch (err) {
@@ -241,6 +302,29 @@ const App: React.FC = () => {
     return <LoadingScreen darkMode={darkMode} />;
   }
 
+  if (!user) {
+    return (
+      <div className={`min-h-screen flex items-center justify-center ${darkMode ? 'bg-[#0f1110]' : 'bg-slate-50'}`}>
+        <div className={`p-8 rounded-3xl border max-w-md w-full text-center ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-xl'}`}>
+          <div className="mb-6 flex justify-center">
+            <div className="w-16 h-16 bg-emerald-500/10 rounded-2xl flex items-center justify-center">
+              <svg className="text-emerald-500" xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10 17h4V2H10v15z"/><path d="M22 17v1a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-1"/></svg>
+            </div>
+          </div>
+          <h1 className="text-2xl font-bold mb-2">Bienvenido a LogiTrack</h1>
+          <p className="text-slate-500 text-sm mb-8">Gestión de contactos logística en la nube con Firebase</p>
+          <button 
+            onClick={signInWithGoogle}
+            className="w-full py-4 rounded-xl bg-emerald-600 text-white font-bold hover:bg-emerald-500 transition-all flex items-center justify-center gap-3"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24"><path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+            Iniciar sesión con Google
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={`flex min-h-screen ${darkMode ? 'bg-[#0f1110] text-slate-200' : 'bg-slate-50 text-slate-900'}`}>
       <Sidebar 
@@ -250,6 +334,8 @@ const App: React.FC = () => {
         onImport={handleImportClick}
         onImportExcel={handleImportExcelClick}
         currentView="contacts"
+        onLogout={logout}
+        user={user}
       />
       <input type="file" ref={fileInputRef} className="hidden" accept=".json" onChange={handleFileImport} />
       <input type="file" ref={excelInputRef} className="hidden" accept=".xlsx, .xls" onChange={handleExcelImport} />
@@ -261,7 +347,7 @@ const App: React.FC = () => {
               Directorio de Contactos
             </h2>
             <p className={`text-sm mt-1 font-medium ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>
-              Gestión local sin conexión
+              Sincronizado con la nube (Firebase)
             </p>
           </div>
           <div className="flex items-center gap-4">

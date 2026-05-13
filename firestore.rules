@@ -1,0 +1,50 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(contactId) {
+      return isSignedIn() && resource.data.ownerId == request.auth.uid;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidContact(data) {
+      return data.keys().hasAll(['client', 'city', 'address', 'ownerId']) &&
+             data.client is string && data.client.size() <= 200 &&
+             data.city is string && data.city.size() <= 100 &&
+             data.address is string && data.address.size() <= 300 &&
+             data.ownerId == request.auth.uid;
+    }
+
+    match /contacts/{contactId} {
+      allow read: if isSignedIn() && isOwner(contactId);
+      allow list: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+      
+      allow create: if isSignedIn() && 
+                      isValidId(contactId) && 
+                      isValidContact(request.resource.data);
+                      
+      allow update: if isSignedIn() && 
+                      isOwner(contactId) && 
+                      isValidContact(request.resource.data) &&
+                      request.resource.data.ownerId == resource.data.ownerId &&
+                      request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                        'client', 'subClient', 'contactName', 'phone', 
+                        'altContactName', 'altPhone', 'city', 'address', 
+                        'unloadingHours', 'notes', 'lastContacted', 'updatedAt'
+                      ]);
+                      
+      allow delete: if isSignedIn() && isOwner(contactId);
+    }
+  }
+}

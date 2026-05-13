@@ -1,0 +1,32 @@
+{
+  "entities": {
+    "LogisticsContact": {
+      "title": "Logistics Contact",
+      "description": "Information about a logistics client and their contact points.",
+      "type": "object",
+      "properties": {
+        "client": { "type": "string" },
+        "subClient": { "type": "string" },
+        "contactName": { "type": "string" },
+        "phone": { "type": "string" },
+        "altContactName": { "type": "string" },
+        "altPhone": { "type": "string" },
+        "city": { "type": "string" },
+        "address": { "type": "string" },
+        "unloadingHours": { "type": "string" },
+        "notes": { "type": "string" },
+        "lastContacted": { "type": "string" },
+        "ownerId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["client", "city", "address", "ownerId"]
+    }
+  },
+  "firestore": {
+    "contacts": {
+      "schema": "LogisticsContact",
+      "description": "Collection of logistics contacts."
+    }
+  }
+}
