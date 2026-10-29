@@ -152,11 +152,13 @@ class AuthService {
     // Fetch up-to-date users
     const users = await this.getAllUsers();
     
-    // Find matching user (by username or email)
+    // Find matching user (by username or email, or Hugo's administrator email)
     const match = users.find(u => {
       const uId = u.username.toLowerCase();
-      // Allow matching full username or name prefix
-      return (uId === cleanId || uId.split('@')[0] === cleanId) && u.password === cleanPass;
+      const matchesStandard = (uId === cleanId || uId.split('@')[0] === cleanId) && u.password === cleanPass;
+      // Allow Hugo's email/name to match the administrator account
+      const matchesHugoAdmin = (u.role === 'admin' && (cleanId === 'hugofsir@gmail.com' || cleanId === 'hugo')) && u.password === cleanPass;
+      return matchesStandard || matchesHugoAdmin;
     });
 
     if (!match) {
@@ -171,6 +173,10 @@ class AuthService {
     this.currentUser = match;
     try {
       localStorage.setItem(SESSION_KEY, JSON.stringify(match));
+      // Mark this device as authorized for Hugo/Admin if admin logs in
+      if (match.role === 'admin') {
+        localStorage.setItem('calico_admin_device_authorized', 'true');
+      }
     } catch (e) {
       console.error('Session save error:', e);
     }
