@@ -16,27 +16,34 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({ darkMode }) => {
         }
         return prev + 1;
       });
-    }, 25); // 100 steps * 25ms = 2500ms (approx 2.5s to fill, leaving some buffer for the 3s total)
+    }, 25); // 100 steps * 25ms = 2500ms (approx 2.5s to fill, buffer for 3s total)
 
     return () => clearInterval(interval);
   }, []);
 
   return (
-    <div className={`fixed inset-0 z-[100] flex flex-col items-center justify-center transition-colors duration-500 ${darkMode ? 'bg-[#0f1110]' : 'bg-slate-50'}`}>
-      <div className="w-full max-w-xs text-center">
+    <div className={`fixed inset-0 z-[100] flex flex-col items-center justify-center transition-colors duration-500 ${darkMode ? 'bg-[#0a0b0b]' : 'bg-slate-50'}`}>
+      <div className="w-full max-w-xs text-center px-4">
         <div className="mb-8 animate-pulse">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-emerald-500 text-white mb-6 shadow-2xl shadow-emerald-500/20">
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-emerald-600 text-white mb-6 shadow-2xl shadow-emerald-600/30">
             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M10 17h4V2H10v15z"/><path d="M22 17v1a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-1"/>
+              <path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/>
+              <path d="M15 18H9"/>
+              <path d="M19 18h2a1 1 0 0 0 1-1v-5l-4-4h-3v10"/>
+              <circle cx="7" cy="18" r="2"/>
+              <circle cx="17" cy="18" r="2"/>
             </svg>
           </div>
-          <h1 className={`text-3xl font-black tracking-tighter ${darkMode ? 'text-white' : 'text-slate-900'}`}>
-            <span className="text-emerald-500">Logi</span>Track Pro
+          <h1 className={`text-3xl font-black tracking-tight ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+            Logitrack <span className="text-emerald-500">Calico</span>
           </h1>
+          <p className="text-xs uppercase tracking-[0.25em] font-bold text-emerald-500/80 mt-1">
+            Gestión Logística • Tucumán
+          </p>
         </div>
 
         <div className="space-y-3">
-          <p className={`text-[10px] uppercase font-black tracking-[0.3em] ${darkMode ? 'text-emerald-500/60' : 'text-emerald-600/60'}`}>
+          <p className={`text-xs uppercase font-black tracking-[0.3em] ${darkMode ? 'text-emerald-400' : 'text-emerald-600'}`}>
             Calico S.A.
           </p>
           
@@ -80,19 +87,19 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({ darkMode }) => {
           </div>
           
           <div className="flex justify-between items-center px-1">
-            <span className={`text-[9px] font-bold uppercase tracking-widest ${darkMode ? 'text-slate-600' : 'text-slate-400'}`}>
+            <span className={`text-[9px] font-bold uppercase tracking-widest ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>
               Iniciando Sistema
             </span>
-            <span className={`text-[9px] font-mono font-bold ${darkMode ? 'text-emerald-500' : 'text-emerald-600'}`}>
+            <span className={`text-[9px] font-mono font-bold ${darkMode ? 'text-emerald-400' : 'text-emerald-600'}`}>
               {progress}%
             </span>
           </div>
         </div>
       </div>
 
-      <div className="absolute bottom-12 text-center">
-        <p className={`text-[9px] uppercase font-bold tracking-[0.2em] ${darkMode ? 'text-slate-700' : 'text-slate-300'}`}>
-          Tucumán • Gestión de Transporte
+      <div className="absolute bottom-10 text-center">
+        <p className={`text-[9px] uppercase font-bold tracking-[0.2em] ${darkMode ? 'text-slate-600' : 'text-slate-400'}`}>
+          Calico S.A. • Red de Transporte & Distribución
         </p>
       </div>
     </div>

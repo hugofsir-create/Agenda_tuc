@@ -12,3 +12,12 @@ if (container) {
     </React.StrictMode>
   );
 }
+
+// Register service worker for PWA offline caching & mobile installability
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch((err) => {
+      console.log('SW registration note:', err);
+    });
+  });
+}

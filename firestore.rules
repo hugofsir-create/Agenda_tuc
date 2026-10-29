@@ -6,45 +6,51 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    function isOwner(contactId) {
-      return isSignedIn() && resource.data.ownerId == request.auth.uid;
-    }
-
     function isValidId(id) {
       return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
     }
 
     function isValidContact(data) {
-      return data.keys().hasAll(['client', 'city', 'address', 'ownerId']) &&
+      return data.keys().hasAll(['client', 'city', 'address']) &&
              data.client is string && data.client.size() <= 200 &&
              data.city is string && data.city.size() <= 100 &&
-             data.address is string && data.address.size() <= 300 &&
-             data.ownerId == request.auth.uid;
+             data.address is string && data.address.size() <= 300;
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['username', 'name', 'password', 'role', 'status']) &&
+             data.username is string && data.username.size() <= 120 &&
+             data.name is string && data.name.size() <= 150 &&
+             data.password is string && data.password.size() <= 120 &&
+             data.role in ['admin', 'operator', 'driver'] &&
+             data.status in ['active', 'inactive'];
+    }
+
+    match /test/connection {
+      allow get: if true;
     }
 
     match /contacts/{contactId} {
-      allow read: if isSignedIn() && isOwner(contactId);
-      allow list: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+      allow get, list: if true;
       
-      allow create: if isSignedIn() && 
-                      isValidId(contactId) && 
+      allow create: if isValidId(contactId) && 
                       isValidContact(request.resource.data);
                       
-      allow update: if isSignedIn() && 
-                      isOwner(contactId) && 
-                      isValidContact(request.resource.data) &&
-                      request.resource.data.ownerId == resource.data.ownerId &&
+      allow update: if isValidContact(request.resource.data) &&
                       request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-                        'client', 'subClient', 'contactName', 'phone', 
+                        'id', 'client', 'subClient', 'contactName', 'phone', 
                         'altContactName', 'altPhone', 'city', 'address', 
-                        'unloadingHours', 'notes', 'lastContacted', 'updatedAt'
+                        'unloadingHours', 'notes', 'lastContacted', 'ownerId', 'updatedAt', 'createdAt'
                       ]);
                       
-      allow delete: if isSignedIn() && isOwner(contactId);
+      allow delete: if true;
+    }
+
+    match /users/{userId} {
+      allow get, list: if true;
+      allow create: if isValidId(userId) && isValidUser(request.resource.data);
+      allow update: if isValidUser(request.resource.data);
+      allow delete: if true;
     }
   }
 }

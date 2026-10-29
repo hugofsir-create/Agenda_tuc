@@ -1,21 +1,25 @@
-
 {
-  "short_name": "LogiTrack",
-  "name": "LogiTrack Pro - Tucumán",
+  "short_name": "Logitrack",
+  "name": "Logitrack Calico - Gestión Logística",
+  "description": "Sistema logístico de Calico S.A. para choferes, rutas GPS y contactos de entrega.",
   "icons": [
     {
       "src": "https://cdn-icons-png.flaticon.com/512/2611/2611152.png",
       "type": "image/png",
-      "sizes": "192x192"
+      "sizes": "192x192",
+      "purpose": "any maskable"
     },
     {
       "src": "https://cdn-icons-png.flaticon.com/512/2611/2611152.png",
       "type": "image/png",
-      "sizes": "512x512"
+      "sizes": "512x512",
+      "purpose": "any maskable"
     }
   ],
-  "start_url": ".",
+  "start_url": "/",
+  "scope": "/",
   "display": "standalone",
-  "theme_color": "#0f1110",
-  "background_color": "#0f1110"
+  "orientation": "portrait-primary",
+  "theme_color": "#10b981",
+  "background_color": "#0a0b0b"
 }

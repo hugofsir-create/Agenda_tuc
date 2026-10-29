@@ -1,3 +1,17 @@
+export type UserRole = 'admin' | 'operator' | 'driver';
+
+export interface AppUser {
+  id: string;
+  username: string; // e.g. admin@calico.com or operador1
+  name: string; // e.g. Administrador Calico, Juan Chofer
+  password?: string;
+  role: UserRole;
+  roleLabel: string;
+  phone?: string;
+  status: 'active' | 'inactive';
+  createdAt?: string;
+  updatedAt?: string;
+}
 
 export interface LogisticsContact {
   id: string;
@@ -12,6 +26,9 @@ export interface LogisticsContact {
   unloadingHours: string;
   notes: string;
   lastContacted?: string;
+  ownerId?: string;
+  createdAt?: any;
+  updatedAt?: any;
 }
 
 export interface ContactStats {

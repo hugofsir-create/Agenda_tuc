@@ -1,6 +1,6 @@
 {
-  "name": "Contactos Tucumán - Gestión Logística",
-  "description": "Sistema profesional de gestión de contactos y socios estratégicos para operaciones logísticas de alta eficiencia en Tucumán.",
+  "name": "Logitrack Calico",
+  "description": "Sistema logístico profesional de Calico S.A. para gestión de rutas, contactos y guiado GPS con Google Maps.",
   "requestFramePermissions": [
     "geolocation"
   ]

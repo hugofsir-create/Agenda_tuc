@@ -16,17 +16,37 @@
         "unloadingHours": { "type": "string" },
         "notes": { "type": "string" },
         "lastContacted": { "type": "string" },
-        "ownerId": { "type": "string" },
         "createdAt": { "type": "string", "format": "date-time" },
         "updatedAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["client", "city", "address", "ownerId"]
+      "required": ["client", "city", "address"]
+    },
+    "AppUser": {
+      "title": "Application User",
+      "description": "Logitrack Calico operator, driver, or administrator.",
+      "type": "object",
+      "properties": {
+        "username": { "type": "string" },
+        "name": { "type": "string" },
+        "password": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "operator", "driver"] },
+        "roleLabel": { "type": "string" },
+        "phone": { "type": "string" },
+        "status": { "type": "string", "enum": ["active", "inactive"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["username", "name", "password", "role", "status"]
     }
   },
   "firestore": {
     "contacts": {
       "schema": "LogisticsContact",
-      "description": "Collection of logistics contacts."
+      "description": "Collection of logistics contacts for Calico."
+    },
+    "users": {
+      "schema": "AppUser",
+      "description": "Collection of authorized operators and drivers managed by admin."
     }
   }
 }
