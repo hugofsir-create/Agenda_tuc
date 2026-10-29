@@ -31,6 +31,31 @@ export interface LogisticsContact {
   updatedAt?: any;
 }
 
+export type RequestStatus = 'pending' | 'approved' | 'rejected';
+
+export interface ContactRequest {
+  id: string;
+  client: string;
+  subClient: string;
+  contactName: string;
+  phone: string;
+  altContactName?: string;
+  altPhone?: string;
+  city: string;
+  address: string;
+  unloadingHours: string;
+  notes: string;
+  submittedByUserId: string;
+  submittedByName: string;
+  submittedByRole: UserRole;
+  status: RequestStatus;
+  reviewedBy?: string;
+  reviewedAt?: any;
+  rejectionReason?: string;
+  createdAt: any;
+  updatedAt?: any;
+}
+
 export interface ContactStats {
   total: number;
 }

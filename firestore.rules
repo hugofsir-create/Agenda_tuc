@@ -26,6 +26,14 @@ service cloud.firestore {
              data.status in ['active', 'inactive'];
     }
 
+    function isValidContactRequest(data) {
+      return data.keys().hasAll(['client', 'city', 'address', 'status', 'submittedByUserId']) &&
+             data.client is string && data.client.size() <= 200 &&
+             data.city is string && data.city.size() <= 100 &&
+             data.address is string && data.address.size() <= 300 &&
+             data.status in ['pending', 'approved', 'rejected'];
+    }
+
     match /test/connection {
       allow get: if true;
     }
@@ -50,6 +58,13 @@ service cloud.firestore {
       allow get, list: if true;
       allow create: if isValidId(userId) && isValidUser(request.resource.data);
       allow update: if isValidUser(request.resource.data);
+      allow delete: if true;
+    }
+
+    match /contact_requests/{requestId} {
+      allow get, list: if true;
+      allow create: if isValidId(requestId) && isValidContactRequest(request.resource.data);
+      allow update: if isValidContactRequest(request.resource.data);
       allow delete: if true;
     }
   }

@@ -10,6 +10,8 @@ interface SidebarProps {
   onLogout?: () => void;
   onOpenUserManagement?: () => void;
   onOpenInstallModal?: () => void;
+  onOpenPendingRequests?: () => void;
+  pendingRequestsCount?: number;
   currentView: 'contacts' | 'gps_mode';
   onViewChange?: (view: 'contacts' | 'gps_mode') => void;
   user?: AppUser | null;
@@ -24,6 +26,8 @@ const Sidebar: React.FC<SidebarProps> = ({
   onLogout,
   onOpenUserManagement,
   onOpenInstallModal,
+  onOpenPendingRequests,
+  pendingRequestsCount = 0,
   currentView,
   onViewChange,
   user
@@ -35,14 +39,13 @@ const Sidebar: React.FC<SidebarProps> = ({
     <aside className={`w-64 min-h-screen hidden md:flex flex-col fixed left-0 top-0 h-full z-20 border-r ${darkMode ? 'bg-[#0a0b0b] border-slate-900' : 'bg-[#141617] border-slate-800'}`}>
       {/* Brand Header */}
       <div className={`p-6 border-b flex flex-col items-center justify-center text-center ${darkMode ? 'border-slate-900' : 'border-slate-800'}`}>
-        <div className="mb-3 w-12 h-12 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shadow-lg shadow-emerald-600/30">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/>
-            <path d="M15 18H9"/>
-            <path d="M19 18h2a1 1 0 0 0 1-1v-5l-4-4h-3v10"/>
-            <circle cx="7" cy="18" r="2"/>
-            <circle cx="17" cy="18" r="2"/>
-          </svg>
+        {/* Calico Corporate Logo (PC Desktop) */}
+        <div className="mb-3.5 w-full max-w-[195px] h-16 rounded-2xl bg-white p-2.5 flex items-center justify-center shadow-lg shadow-black/40 border border-emerald-500/20 transition-all hover:scale-[1.02]">
+          <img
+            src="/assets/aistudio/Calico_9b3203f6.png"
+            alt="Calico Logística Integral"
+            className="max-h-12 w-auto object-contain select-none"
+          />
         </div>
         <h1 className="text-base font-black text-white tracking-tight">
           Logitrack <span className="text-emerald-500">Calico</span>
@@ -101,13 +104,35 @@ const Sidebar: React.FC<SidebarProps> = ({
           </button>
         </div>
 
-        {/* Admin only: User Management */}
+        {/* Admin only: Solicitudes Pendientes and User Management */}
         {isAdmin && (
           <>
             <p className="text-[9px] font-bold uppercase tracking-[0.2em] mt-5 mb-2 px-3 text-emerald-400/80">Administración</p>
+            
+            <button 
+              onClick={onOpenPendingRequests}
+              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl border transition-all font-bold text-xs ${
+                pendingRequestsCount > 0
+                  ? 'bg-amber-500/15 border-amber-500/40 text-amber-300 hover:bg-amber-500/25 animate-pulse'
+                  : 'bg-white/5 border-white/10 text-slate-300 hover:bg-white/10 hover:text-white'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <span>📋</span>
+                <span>Solicitudes Choferes</span>
+              </div>
+              {pendingRequestsCount > 0 ? (
+                <span className="px-2 py-0.5 rounded-full bg-amber-500 text-slate-950 font-black text-[10px]">
+                  {pendingRequestsCount}
+                </span>
+              ) : (
+                <span className="text-[10px] text-slate-500">0</span>
+              )}
+            </button>
+
             <button 
               onClick={onOpenUserManagement}
-              className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 transition-all font-bold text-xs"
+              className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 transition-all font-bold text-xs mt-1.5"
             >
               <span>👥</span>
               <span>Gestión de Personal</span>
@@ -127,15 +152,20 @@ const Sidebar: React.FC<SidebarProps> = ({
           <span>Guardar Copia JSON</span>
         </button>
 
-        <button onClick={onImport} className="w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-all font-medium text-xs">
-          <span>📂</span>
-          <span>Cargar JSON</span>
-        </button>
+        {/* Imports only for Admin so drivers cannot bypass the request system */}
+        {isAdmin && (
+          <>
+            <button onClick={onImport} className="w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-all font-medium text-xs">
+              <span>📂</span>
+              <span>Cargar JSON</span>
+            </button>
 
-        <button onClick={onImportExcel} className="w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-all font-medium text-xs">
-          <span>📊</span>
-          <span>Importar Excel</span>
-        </button>
+            <button onClick={onImportExcel} className="w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-all font-medium text-xs">
+              <span>📊</span>
+              <span>Importar Excel</span>
+            </button>
+          </>
+        )}
 
         <div className="pt-4 mt-4 border-t border-white/5">
           <button onClick={onLogout} className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-rose-400 hover:bg-rose-500/10 transition-all font-bold text-xs">

@@ -46,14 +46,22 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ darkMode, onLoginSuccess, onO
       <div className="w-full max-w-md">
         {/* Brand Card Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-emerald-600 text-white shadow-xl shadow-emerald-600/20 mb-4 transform hover:scale-105 transition-transform">
-            <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/>
-              <path d="M15 18H9"/>
-              <path d="M19 18h2a1 1 0 0 0 1-1v-5l-4-4h-3v10"/>
-              <circle cx="7" cy="18" r="2"/>
-              <circle cx="17" cy="18" r="2"/>
-            </svg>
+          {/* Desktop Logo (Calico Corporativo) */}
+          <div className="hidden md:inline-flex items-center justify-center px-6 py-3.5 rounded-2xl bg-white shadow-xl shadow-black/25 mb-4 border border-emerald-500/30 transform hover:scale-105 transition-transform">
+            <img
+              src="/assets/aistudio/Calico_9b3203f6.png"
+              alt="Calico Logística Integral"
+              className="h-14 w-auto object-contain select-none"
+            />
+          </div>
+
+          {/* Mobile Icon (Camión Logitrack) */}
+          <div className="inline-flex md:hidden items-center justify-center w-20 h-20 rounded-3xl bg-emerald-600 text-white shadow-xl shadow-emerald-600/30 mb-4 p-2.5 transform hover:scale-105 transition-transform">
+            <img
+              src="/truck-app-icon.svg"
+              alt="Camión Logitrack Móvil"
+              className="w-full h-full object-contain drop-shadow"
+            />
           </div>
           <h1 className="text-3xl font-black tracking-tight">
             Logitrack <span className="text-emerald-500">Calico</span>

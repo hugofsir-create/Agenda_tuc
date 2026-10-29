@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#059669" />
+      <stop offset="50%" stop-color="#10b981" />
+      <stop offset="100%" stop-color="#047857" />
+    </linearGradient>
+    <linearGradient id="truckBodyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="100%" stop-color="#f1f5f9" />
+    </linearGradient>
+    <linearGradient id="cabinGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f8fafc" />
+      <stop offset="100%" stop-color="#e2e8f0" />
+    </linearGradient>
+    <filter id="dropShadow" x="-10%" y="-10%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="16" stdDeviation="16" flood-color="#000000" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+
+  <!-- App Background (Rounded Squircle) -->
+  <rect width="512" height="512" rx="112" fill="url(#bgGrad)"/>
+  
+  <!-- Subtle Internal Highlight Ring -->
+  <rect x="8" y="8" width="496" height="496" rx="104" fill="none" stroke="#ffffff" stroke-width="4" stroke-opacity="0.2"/>
+
+  <!-- Truck Container with Shadow -->
+  <g filter="url(#dropShadow)" transform="translate(40, 95)">
+    <!-- Main Cargo Body -->
+    <rect x="20" y="80" width="250" height="175" rx="16" fill="url(#truckBodyGrad)"/>
+    
+    <!-- Cargo Stripe Accent (Calico Emerald Accent) -->
+    <rect x="20" y="195" width="250" height="24" fill="#10b981"/>
+    
+    <!-- Cargo Box Rivets/Detail -->
+    <circle cx="36" cy="96" r="4" fill="#cbd5e1"/>
+    <circle cx="254" cy="96" r="4" fill="#cbd5e1"/>
+    <circle cx="36" cy="180" r="4" fill="#cbd5e1"/>
+    <circle cx="254" cy="180" r="4" fill="#cbd5e1"/>
+    
+    <!-- Truck Cabin (Front) -->
+    <path d="M270 120 L340 120 Q355 120 365 130 L400 175 Q412 190 412 208 L412 255 Q412 260 405 260 L270 260 Z" fill="url(#cabinGrad)"/>
+    
+    <!-- Cabin Window -->
+    <path d="M285 135 L335 135 Q343 135 348 141 L375 178 Q379 184 379 192 L285 192 Z" fill="#0284c7" fill-opacity="0.85"/>
+    
+    <!-- Cabin Window Reflection -->
+    <path d="M295 140 L325 140 L315 185 L290 185 Z" fill="#ffffff" fill-opacity="0.35"/>
+
+    <!-- Headlight -->
+    <rect x="396" y="222" width="16" height="18" rx="5" fill="#facc15"/>
+
+    <!-- Front Bumper -->
+    <rect x="402" y="244" width="16" height="16" rx="4" fill="#64748b"/>
+
+    <!-- Truck Chassis / Undercarriage -->
+    <rect x="45" y="250" width="345" height="15" rx="6" fill="#334155"/>
+
+    <!-- Rear Wheels (Dual axle look) -->
+    <!-- Wheel 1 -->
+    <circle cx="85" cy="265" r="42" fill="#0f172a"/>
+    <circle cx="85" cy="265" r="26" fill="#475569"/>
+    <circle cx="85" cy="265" r="13" fill="#cbd5e1"/>
+    <circle cx="85" cy="265" r="5" fill="#0f172a"/>
+
+    <!-- Wheel 2 -->
+    <circle cx="175" cy="265" r="42" fill="#0f172a"/>
+    <circle cx="175" cy="265" r="26" fill="#475569"/>
+    <circle cx="175" cy="265" r="13" fill="#cbd5e1"/>
+    <circle cx="175" cy="265" r="5" fill="#0f172a"/>
+
+    <!-- Front Wheel -->
+    <circle cx="345" cy="265" r="42" fill="#0f172a"/>
+    <circle cx="345" cy="265" r="26" fill="#475569"/>
+    <circle cx="345" cy="265" r="13" fill="#cbd5e1"/>
+    <circle cx="345" cy="265" r="5" fill="#0f172a"/>
+
+    <!-- Speed/Movement lines behind cargo -->
+    <rect x="-18" y="110" width="28" height="6" rx="3" fill="#ffffff" fill-opacity="0.6"/>
+    <rect x="-30" y="140" width="38" height="6" rx="3" fill="#ffffff" fill-opacity="0.8"/>
+    <rect x="-12" y="170" width="22" height="6" rx="3" fill="#ffffff" fill-opacity="0.5"/>
+  </g>
+</svg>

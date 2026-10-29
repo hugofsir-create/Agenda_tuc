@@ -37,6 +37,29 @@
         "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["username", "name", "password", "role", "status"]
+    },
+    "ContactRequest": {
+      "title": "Contact Proposal Request",
+      "description": "Pending contact proposal submitted by a driver awaiting administrator approval.",
+      "type": "object",
+      "properties": {
+        "client": { "type": "string" },
+        "subClient": { "type": "string" },
+        "contactName": { "type": "string" },
+        "phone": { "type": "string" },
+        "city": { "type": "string" },
+        "address": { "type": "string" },
+        "unloadingHours": { "type": "string" },
+        "notes": { "type": "string" },
+        "submittedByUserId": { "type": "string" },
+        "submittedByName": { "type": "string" },
+        "submittedByRole": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "reviewedBy": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["client", "city", "address", "submittedByUserId", "status"]
     }
   },
   "firestore": {
@@ -47,6 +70,10 @@
     "users": {
       "schema": "AppUser",
       "description": "Collection of authorized operators and drivers managed by admin."
+    },
+    "contact_requests": {
+      "schema": "ContactRequest",
+      "description": "Pending and reviewed contact creation requests submitted by drivers."
     }
   }
 }

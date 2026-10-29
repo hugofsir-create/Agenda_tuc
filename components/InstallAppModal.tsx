@@ -55,8 +55,8 @@ const InstallAppModal: React.FC<InstallAppModalProps> = ({
           darkMode ? 'border-slate-800 bg-slate-950/60' : 'border-slate-100 bg-slate-50/80'
         }`}>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center text-xl shadow-lg shadow-emerald-600/30">
-              📲
+            <div className="w-11 h-11 rounded-2xl bg-emerald-600 text-white flex items-center justify-center p-1.5 shadow-lg shadow-emerald-600/30 overflow-hidden">
+              <img src="/truck-app-icon.svg" alt="Camión Logitrack Móvil" className="w-full h-full object-contain" />
             </div>
             <div>
               <h3 className="text-lg font-black tracking-tight leading-tight">
@@ -79,18 +79,38 @@ const InstallAppModal: React.FC<InstallAppModalProps> = ({
         </div>
 
         {/* Modal Body - Scrollable */}
-        <div className="p-5 sm:p-6 overflow-y-auto space-y-5">
+        <div className="p-5 sm:p-6 overflow-y-auto space-y-4">
           
+          {/* App Icon Preview Card */}
+          <div className={`p-3.5 rounded-2xl border flex items-center gap-3.5 ${
+            darkMode ? 'bg-slate-950/80 border-slate-800' : 'bg-slate-50 border-slate-200'
+          }`}>
+            <img 
+              src="/truck-app-icon.svg" 
+              alt="Icono Móvil Camión" 
+              className="w-12 h-12 rounded-2xl shadow-lg border border-emerald-500/30 shrink-0"
+            />
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-400">Icono Móvil</span>
+                <span className="text-[9px] px-1.5 py-0.2 bg-emerald-500/10 text-emerald-400 font-bold rounded-full border border-emerald-500/20">Camión PWA</span>
+              </div>
+              <p className="text-xs font-bold truncate">Logitrack Calico Móvil</p>
+              <p className="text-[11px] text-slate-400 mt-0.5">Icono de camión listo para la pantalla de inicio de tu celular.</p>
+            </div>
+          </div>
+
           {/* Highlight Banner */}
           <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs flex items-center gap-3">
-            <span className="text-xl">🚀</span>
+            <span className="text-xl">🚚</span>
             <div>
               <span className="font-bold block">Versión Celular Optimizada</span>
               <span className="text-slate-400 text-[11px] leading-tight block mt-0.5">
-                Al escanear desde el celular, la aplicación se abre en modo Chofer/GPS exclusivo, sin vistas de PC innecesarias y con guiado satelital directo.
+                Al abrir desde el celular, la aplicación opera en modo Chofer/GPS con guiado directo por Google Maps y navegación satelital.
               </span>
             </div>
           </div>
+
 
           {/* QR Code Presentation Box */}
           <div className="flex flex-col items-center justify-center">
@@ -217,7 +237,7 @@ const InstallAppModal: React.FC<InstallAppModalProps> = ({
                 <div className="flex items-start gap-2.5">
                   <span className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-[10px] font-black shrink-0 mt-0.5">4</span>
                   <p className="text-slate-300 leading-snug">
-                    ¡Listo! Se añadirá el icono de <strong className="text-white">Logitrack Calico</strong> como app nativa a tu celular.
+                    ¡Listo! Se añadirá el icono de camión 🚚 de <strong className="text-white">Logitrack Calico</strong> a tu pantalla de inicio.
                   </p>
                 </div>
               </div>
@@ -249,7 +269,7 @@ const InstallAppModal: React.FC<InstallAppModalProps> = ({
                 <div className="flex items-start gap-2.5">
                   <span className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-[10px] font-black shrink-0 mt-0.5">4</span>
                   <p className="text-slate-300 leading-snug">
-                    Toca <strong className="text-white">"Agregar"</strong> en la esquina superior derecha y la app quedará instalada.
+                    Toca <strong className="text-white">"Agregar"</strong> y el icono de camión 🚚 quedará en la pantalla principal de tu celular.
                   </p>
                 </div>
               </div>

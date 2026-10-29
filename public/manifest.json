@@ -1,0 +1,18 @@
+{
+  "short_name": "Logitrack Calico",
+  "name": "Logitrack Calico - Chofer Móvil",
+  "description": "App de logística y guiado GPS satelital de Calico S.A. para choferes y administración.",
+  "icons": [
+    {
+      "src": "/truck-app-icon.svg",
+      "type": "image/svg+xml",
+      "sizes": "192x192 512x512 any",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/?mobile=true",
+  "background_color": "#0a0b0b",
+  "theme_color": "#10b981",
+  "display": "standalone",
+  "orientation": "portrait"
+}

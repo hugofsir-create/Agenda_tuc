@@ -8,7 +8,8 @@ import LoadingScreen from './components/LoadingScreen';
 import LoginScreen from './components/LoginScreen';
 import UserManagementModal from './components/UserManagementModal';
 import InstallAppModal from './components/InstallAppModal';
-import { LogisticsContact, AppUser } from './types';
+import PendingRequestsModal from './components/PendingRequestsModal';
+import { LogisticsContact, AppUser, ContactRequest } from './types';
 import * as XLSX from 'xlsx';
 import { db, handleFirestoreError, OperationType } from './lib/firebase';
 import { authService } from './services/authService';
@@ -42,14 +43,23 @@ const App: React.FC = () => {
   // PWA install prompt handler
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
 
+  // Role checks
+  const isAdmin = user?.role === 'admin';
+  const isDriver = user?.role === 'driver';
+
   // Modals
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isUserManagementOpen, setIsUserManagementOpen] = useState(false);
   const [isInstallModalOpen, setIsInstallModalOpen] = useState(false);
+  const [isPendingRequestsOpen, setIsPendingRequestsOpen] = useState(false);
   const [currentContact, setCurrentContact] = useState<LogisticsContact | null>(null);
   const [printingContact, setPrintingContact] = useState<LogisticsContact | null>(null);
   const [qrModalContact, setQrModalContact] = useState<LogisticsContact | null>(null);
   const [routeModalContact, setRouteModalContact] = useState<LogisticsContact | null>(null);
+
+  // Requests state
+  const [contactRequests, setContactRequests] = useState<ContactRequest[]>([]);
+  const [requestNotification, setRequestNotification] = useState<string | null>(null);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCity, setSelectedCity] = useState<string>('all');
@@ -92,6 +102,34 @@ const App: React.FC = () => {
 
     return () => unsubscribe();
   }, [user]);
+
+  // Listen to contact requests in Firestore
+  useEffect(() => {
+    if (!user) return;
+
+    const qReqs = query(collection(db, 'contact_requests'));
+    const unsubscribe = onSnapshot(qReqs, (snapshot) => {
+      const data = snapshot.docs.map(docSnap => ({
+        ...docSnap.data(),
+        id: docSnap.id
+      })) as ContactRequest[];
+      // sort latest first
+      data.sort((a, b) => {
+        const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
+        const timeB = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
+        return timeB - timeA;
+      });
+      setContactRequests(data);
+    }, (error) => {
+      console.warn('contact_requests listener error:', error);
+    });
+
+    return () => unsubscribe();
+  }, [user]);
+
+  const pendingRequestsCount = useMemo(() => {
+    return contactRequests.filter(r => r.status === 'pending').length;
+  }, [contactRequests]);
 
   // Dark mode class sync
   useEffect(() => {
@@ -162,9 +200,13 @@ const App: React.FC = () => {
     });
   }, [contacts, searchTerm, selectedCity]);
 
-  // Save or edit contact
+  // Save or edit contact (Admin only)
   const handleSaveContact = async (contact: LogisticsContact) => {
     if (!user) return;
+    if (!isAdmin) {
+      alert('Solo el Administrador puede registrar o editar contactos directamente en el directorio.');
+      return;
+    }
 
     try {
       if (currentContact) {
@@ -191,8 +233,35 @@ const App: React.FC = () => {
     }
   };
 
-  // Delete single contact
+  // Submit contact proposal request (Driver role)
+  const handleSubmitContactRequest = async (requestData: Omit<LogisticsContact, 'id'>) => {
+    if (!user) return;
+    try {
+      const newReqRef = doc(collection(db, 'contact_requests'));
+      await setDoc(newReqRef, {
+        ...requestData,
+        id: newReqRef.id,
+        submittedByUserId: user.id,
+        submittedByName: user.name,
+        submittedByRole: user.role,
+        status: 'pending',
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      });
+      setIsModalOpen(false);
+      setRequestNotification(`✅ Solicitud para "${requestData.client}" enviada con éxito. Quedará visible en el directorio una vez que el Administrador la apruebe.`);
+      setTimeout(() => setRequestNotification(null), 6000);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, 'contact_requests');
+    }
+  };
+
+  // Delete single contact (Admin only)
   const handleDeleteContact = async (id: string) => {
+    if (!isAdmin) {
+      alert('Acción restringida: Solo el Administrador puede eliminar registros.');
+      return;
+    }
     if (window.confirm('¿Eliminar este registro de contacto?')) {
       try {
         await deleteDoc(doc(db, 'contacts', id));
@@ -203,8 +272,12 @@ const App: React.FC = () => {
     }
   };
 
-  // Massive delete
+  // Massive delete (Admin only)
   const handleMassiveDelete = async () => {
+    if (!isAdmin) {
+      alert('Acción restringida: Solo el Administrador puede realizar eliminaciones masivas.');
+      return;
+    }
     if (window.confirm(`¿Está seguro de eliminar los ${selectedIds.length} registros seleccionados de la base de datos de Calico?`)) {
       try {
         const batch = writeBatch(db);
@@ -220,6 +293,7 @@ const App: React.FC = () => {
   };
 
   const toggleSelectAll = () => {
+    if (!isAdmin) return;
     if (selectedIds.length === filteredContacts.length) {
       setSelectedIds([]);
     } else {
@@ -228,12 +302,17 @@ const App: React.FC = () => {
   };
 
   const toggleSelect = (id: string) => {
+    if (!isAdmin) return;
     setSelectedIds(prev => 
       prev.includes(id) ? prev.filter(sid => sid !== id) : [...prev, id]
     );
   };
 
   const openEditModal = (contact: LogisticsContact) => {
+    if (!isAdmin) {
+      alert('Acción restringida: Solo el Administrador puede editar contactos existentes.');
+      return;
+    }
     setCurrentContact(contact);
     setIsModalOpen(true);
   };
@@ -285,12 +364,25 @@ const App: React.FC = () => {
     URL.revokeObjectURL(url);
   };
 
-  const handleImportClick = () => fileInputRef.current?.click();
-  const handleImportExcelClick = () => excelInputRef.current?.click();
+  const handleImportClick = () => {
+    if (!isAdmin) {
+      alert('Solo el Administrador puede importar contactos.');
+      return;
+    }
+    fileInputRef.current?.click();
+  };
+
+  const handleImportExcelClick = () => {
+    if (!isAdmin) {
+      alert('Solo el Administrador puede importar contactos desde Excel.');
+      return;
+    }
+    excelInputRef.current?.click();
+  };
 
   const handleFileImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file || !user) return;
+    if (!file || !user || !isAdmin) return;
     const reader = new FileReader();
     reader.onload = async (e) => {
       try {
@@ -419,6 +511,8 @@ const App: React.FC = () => {
         onLogout={() => authService.logout()}
         onOpenUserManagement={() => setIsUserManagementOpen(true)}
         onOpenInstallModal={() => setIsInstallModalOpen(true)}
+        onOpenPendingRequests={() => setIsPendingRequestsOpen(true)}
+        pendingRequestsCount={pendingRequestsCount}
         user={user}
       />
 
@@ -431,22 +525,22 @@ const App: React.FC = () => {
         darkMode ? 'bg-[#0a0b0b]/90 border-slate-800' : 'bg-white/90 border-slate-200 shadow-sm'
       }`}>
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold shadow-md shadow-emerald-600/30">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/>
-              <path d="M15 18H9"/>
-              <path d="M19 18h2a1 1 0 0 0 1-1v-5l-4-4h-3v10"/>
-              <circle cx="7" cy="18" r="2"/>
-              <circle cx="17" cy="18" r="2"/>
-            </svg>
+          <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold shadow-md shadow-emerald-600/30 overflow-hidden p-0.5">
+            <img
+              src="/truck-app-icon.svg"
+              alt="Camión Logitrack"
+              className="w-full h-full object-contain"
+            />
           </div>
           <div>
             <div className="flex items-center gap-1.5">
               <h1 className="text-sm font-black tracking-tight leading-none">
                 Logitrack <span className="text-emerald-500">Calico</span>
               </h1>
-              <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                Móvil
+              <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded-full ${
+                isAdmin ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+              }`}>
+                {isAdmin ? 'Admin' : 'Chofer'}
               </span>
             </div>
             <p className="text-[10px] text-slate-400 font-medium truncate max-w-[130px] mt-0.5">
@@ -456,6 +550,26 @@ const App: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-1.5">
+          {/* Admin Pending Requests Button on Mobile */}
+          {isAdmin && (
+            <button
+              onClick={() => setIsPendingRequestsOpen(true)}
+              className={`relative p-2 rounded-xl border text-xs ${
+                pendingRequestsCount > 0
+                  ? 'bg-amber-500/20 border-amber-500/40 text-amber-300 animate-pulse'
+                  : darkMode ? 'bg-slate-900 border-slate-800 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-600'
+              }`}
+              title="Solicitudes Pendientes de Choferes"
+            >
+              <span>📋</span>
+              {pendingRequestsCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-amber-500 text-slate-950 font-black text-[9px] flex items-center justify-center">
+                  {pendingRequestsCount}
+                </span>
+              )}
+            </button>
+          )}
+
           <button 
             onClick={() => setIsInstallModalOpen(true)}
             className="px-2.5 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-bold text-xs flex items-center gap-1 shadow-sm active:scale-95 transition-transform"
@@ -472,10 +586,14 @@ const App: React.FC = () => {
           </button>
           <button 
             onClick={() => { setCurrentContact(null); setIsModalOpen(true); }}
-            className="p-2 rounded-xl bg-emerald-600 text-white font-bold shadow-md shadow-emerald-600/30 flex items-center gap-1 text-xs"
+            className={`p-2 rounded-xl font-bold shadow-md flex items-center gap-1 text-xs ${
+              isAdmin 
+                ? 'bg-emerald-600 text-white shadow-emerald-600/30' 
+                : 'bg-amber-500 text-slate-950 shadow-amber-500/30'
+            }`}
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
-            <span className="hidden sm:inline">Nuevo</span>
+            <span className="hidden sm:inline">{isAdmin ? 'Nuevo' : 'Solicitar'}</span>
           </button>
         </div>
       </header>
@@ -483,6 +601,17 @@ const App: React.FC = () => {
       {/* Main Content Area */}
       <main className="flex-1 md:ml-64 p-4 sm:p-6 lg:p-10 pb-28 md:pb-10 max-w-7xl">
         
+        {/* Driver request submitted notification banner */}
+        {requestNotification && (
+          <div className="mb-6 p-4 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-bold flex items-center justify-between shadow-lg shadow-amber-500/5 animate-fade-in">
+            <div className="flex items-center gap-2">
+              <span className="text-base">⏳</span>
+              <span>{requestNotification}</span>
+            </div>
+            <button onClick={() => setRequestNotification(null)} className="text-amber-400 hover:text-white px-2">✕</button>
+          </div>
+        )}
+
         {/* Desktop Header */}
         <header className="hidden md:flex justify-between items-center mb-8">
           <div>
@@ -493,15 +622,43 @@ const App: React.FC = () => {
               <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
                 Calico S.A.
               </span>
+              <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
+                isAdmin ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+              }`}>
+                {user.roleLabel}
+              </span>
             </div>
             <p className={`text-xs sm:text-sm mt-1 font-medium ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
               {activeTab === 'gps_mode' 
                 ? 'Seleccione cualquier destino para iniciar la navegación guiada por Google Maps.' 
-                : 'Sincronizado en tiempo real con Firebase en la nube.'}
+                : isDriver
+                  ? 'Como chofer puedes consultar el directorio y solicitar nuevos puntos para revisión.'
+                  : 'Sincronizado en tiempo real con Firebase en la nube.'}
             </p>
           </div>
           
           <div className="flex items-center gap-3">
+            {/* Admin Pending Requests Button */}
+            {isAdmin && (
+              <button
+                onClick={() => setIsPendingRequestsOpen(true)}
+                className={`px-4 py-2.5 rounded-xl border flex items-center gap-2 text-xs font-bold transition-all shadow-sm ${
+                  pendingRequestsCount > 0
+                    ? 'bg-amber-500/20 border-amber-500/50 text-amber-300 hover:bg-amber-500/30 animate-pulse'
+                    : darkMode ? 'bg-slate-900 border-slate-800 text-slate-300 hover:bg-slate-800' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
+                }`}
+                title="Ver solicitudes pendientes de choferes"
+              >
+                <span className="text-sm">📋</span>
+                <span>Solicitudes Choferes</span>
+                {pendingRequestsCount > 0 && (
+                  <span className="px-2 py-0.5 rounded-full bg-amber-500 text-slate-950 font-black text-[10px]">
+                    {pendingRequestsCount}
+                  </span>
+                )}
+              </button>
+            )}
+
             <button 
               onClick={() => setIsInstallModalOpen(true)}
               className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600/10 to-teal-600/10 border border-emerald-500/30 text-emerald-400 hover:border-emerald-400 hover:text-white transition-all flex items-center gap-2 text-xs font-bold shadow-sm"
@@ -519,10 +676,14 @@ const App: React.FC = () => {
             </button>
             <button 
               onClick={() => { setCurrentContact(null); setIsModalOpen(true); }}
-              className="px-5 py-2.5 rounded-xl bg-emerald-600 text-white font-bold hover:bg-emerald-500 shadow-lg shadow-emerald-600/30 transition-all flex items-center gap-2 text-sm"
+              className={`px-5 py-2.5 rounded-xl font-bold shadow-lg transition-all flex items-center gap-2 text-sm ${
+                isAdmin 
+                  ? 'bg-emerald-600 text-white hover:bg-emerald-500 shadow-emerald-600/30' 
+                  : 'bg-amber-500 text-slate-950 hover:bg-amber-400 shadow-amber-500/30 font-black'
+              }`}
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
-              <span>Añadir Registro</span>
+              <span>{isAdmin ? 'Añadir Registro' : 'Cargar Nuevo Punto'}</span>
             </button>
           </div>
         </header>
@@ -601,7 +762,7 @@ const App: React.FC = () => {
 
               {/* Actions & View switch */}
               <div className="flex items-center gap-2 overflow-x-auto pb-1 lg:pb-0">
-                {filteredContacts.length > 0 && (
+                {isAdmin && filteredContacts.length > 0 && (
                   <button 
                     onClick={toggleSelectAll}
                     className={`flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl transition-all text-xs font-bold whitespace-nowrap ${
@@ -615,7 +776,7 @@ const App: React.FC = () => {
                   </button>
                 )}
 
-                {selectedIds.length > 0 && (
+                {isAdmin && selectedIds.length > 0 && (
                   <button 
                     onClick={handleMassiveDelete}
                     className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-rose-500 text-white hover:bg-rose-600 transition-all text-xs font-bold whitespace-nowrap shadow-md shadow-rose-500/20"
@@ -659,16 +820,22 @@ const App: React.FC = () => {
             <div className="mt-6 flex flex-wrap justify-center gap-3">
               <button
                 onClick={() => { setCurrentContact(null); setIsModalOpen(true); }}
-                className="px-5 py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-xs shadow-md hover:bg-emerald-500"
+                className={`px-5 py-2.5 rounded-xl font-bold text-xs shadow-md ${
+                  isAdmin 
+                    ? 'bg-emerald-600 text-white hover:bg-emerald-500' 
+                    : 'bg-amber-500 text-slate-950 hover:bg-amber-400 font-black'
+                }`}
               >
-                + Añadir Nuevo Registro
+                {isAdmin ? '+ Añadir Nuevo Registro' : '+ Solicitar Nuevo Punto Operativo'}
               </button>
-              <button
-                onClick={handleImportExcelClick}
-                className={`px-5 py-2.5 rounded-xl border font-bold text-xs ${darkMode ? 'border-slate-800 text-slate-300 hover:bg-slate-800' : 'border-slate-200 text-slate-700 hover:bg-slate-100'}`}
-              >
-                📊 Importar desde Excel
-              </button>
+              {isAdmin && (
+                <button
+                  onClick={handleImportExcelClick}
+                  className={`px-5 py-2.5 rounded-xl border font-bold text-xs ${darkMode ? 'border-slate-800 text-slate-300 hover:bg-slate-800' : 'border-slate-200 text-slate-700 hover:bg-slate-100'}`}
+                >
+                  📊 Importar desde Excel
+                </button>
+              )}
             </div>
           </div>
         )}
@@ -690,15 +857,17 @@ const App: React.FC = () => {
                   }`}
                 >
                   <div className="p-5 sm:p-6">
-                    {/* Header: Checkbox + Client + Action icons */}
+                    {/* Header: Checkbox (Admin only) + Client + Action icons */}
                     <div className="flex justify-between items-start gap-3 mb-4">
                       <div className="flex items-center gap-3 min-w-0">
-                        <input 
-                          type="checkbox" 
-                          className="w-4 h-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
-                          checked={isSelected}
-                          onChange={() => toggleSelect(c.id)}
-                        />
+                        {isAdmin && (
+                          <input 
+                            type="checkbox" 
+                            className="w-4 h-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                            checked={isSelected}
+                            onChange={() => toggleSelect(c.id)}
+                          />
+                        )}
                         <div className="min-w-0">
                           <h4 className="font-black text-base sm:text-lg leading-tight truncate">{c.client}</h4>
                           <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-wider block mt-0.5">
@@ -722,20 +891,26 @@ const App: React.FC = () => {
                         >
                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
                         </button>
-                        <button 
-                          onClick={() => openEditModal(c)} 
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-emerald-500 transition-all"
-                          title="Editar"
-                        >
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                        </button>
-                        <button 
-                          onClick={() => handleDeleteContact(c.id)} 
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 transition-all"
-                          title="Borrar"
-                        >
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                        </button>
+                        
+                        {/* Edit & Delete: Strictly for Administrator */}
+                        {isAdmin && (
+                          <>
+                            <button 
+                              onClick={() => openEditModal(c)} 
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-emerald-500 transition-all"
+                              title="Editar"
+                            >
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                            </button>
+                            <button 
+                              onClick={() => handleDeleteContact(c.id)} 
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 transition-all"
+                              title="Borrar"
+                            >
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                            </button>
+                          </>
+                        )}
                       </div>
                     </div>
 
@@ -856,14 +1031,16 @@ const App: React.FC = () => {
               <table className="w-full text-left">
                 <thead className={`text-[10px] uppercase font-bold tracking-widest ${darkMode ? 'bg-slate-950 text-slate-500' : 'bg-slate-50 text-slate-400'}`}>
                   <tr>
-                    <th className="px-6 py-4 w-10">
-                      <input 
-                        type="checkbox" 
-                        className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
-                        checked={selectedIds.length === filteredContacts.length && filteredContacts.length > 0}
-                        onChange={toggleSelectAll}
-                      />
-                    </th>
+                    {isAdmin && (
+                      <th className="px-6 py-4 w-10">
+                        <input 
+                          type="checkbox" 
+                          className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                          checked={selectedIds.length === filteredContacts.length && filteredContacts.length > 0}
+                          onChange={toggleSelectAll}
+                        />
+                      </th>
+                    )}
                     <th className="px-6 py-4">Empresa</th>
                     <th className="px-6 py-4">Contacto</th>
                     <th className="px-6 py-4">Teléfono</th>
@@ -882,14 +1059,16 @@ const App: React.FC = () => {
                           darkMode ? 'hover:bg-slate-800/30' : 'hover:bg-slate-50'
                         } ${selectedIds.includes(c.id) ? (darkMode ? 'bg-emerald-500/10' : 'bg-emerald-50') : ''}`}
                       >
-                        <td className="px-6 py-4">
-                          <input 
-                            type="checkbox" 
-                            className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
-                            checked={selectedIds.includes(c.id)}
-                            onChange={() => toggleSelect(c.id)}
-                          />
-                        </td>
+                        {isAdmin && (
+                          <td className="px-6 py-4">
+                            <input 
+                              type="checkbox" 
+                              className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                              checked={selectedIds.includes(c.id)}
+                              onChange={() => toggleSelect(c.id)}
+                            />
+                          </td>
+                        )}
                         <td className="px-6 py-4 font-bold text-sm text-slate-900 dark:text-white">{c.client}</td>
                         <td className="px-6 py-4">{c.contactName || '—'}</td>
                         <td className="px-6 py-4 font-mono text-emerald-500 font-medium">{c.phone || '—'}</td>
@@ -921,18 +1100,22 @@ const App: React.FC = () => {
                           >
                             🖨️
                           </button>
-                          <button 
-                            onClick={() => openEditModal(c)} 
-                            className="text-emerald-500 hover:underline font-bold px-1"
-                          >
-                            Editar
-                          </button>
-                          <button 
-                            onClick={() => handleDeleteContact(c.id)} 
-                            className="text-rose-500 hover:underline font-bold px-1"
-                          >
-                            Borrar
-                          </button>
+                          {isAdmin && (
+                            <>
+                              <button 
+                                onClick={() => openEditModal(c)} 
+                                className="text-emerald-500 hover:underline font-bold px-1"
+                              >
+                                Editar
+                              </button>
+                              <button 
+                                onClick={() => handleDeleteContact(c.id)} 
+                                className="text-rose-500 hover:underline font-bold px-1"
+                              >
+                                Borrar
+                              </button>
+                            </>
+                          )}
                         </td>
                       </tr>
                     );
@@ -972,16 +1155,34 @@ const App: React.FC = () => {
           onClick={() => { setCurrentContact(null); setIsModalOpen(true); }}
           className="flex flex-col items-center py-1 px-3 text-emerald-500 font-bold"
         >
-          <div className="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center -mt-3 shadow-md shadow-emerald-600/40">
+          <div className={`w-8 h-8 rounded-full text-white flex items-center justify-center -mt-3 shadow-md ${
+            isAdmin ? 'bg-emerald-600 shadow-emerald-600/40' : 'bg-amber-500 text-slate-950 shadow-amber-500/40'
+          }`}>
             <span className="text-base font-bold">+</span>
           </div>
-          <span className="text-[10px] mt-0.5">Nuevo</span>
+          <span className="text-[10px] mt-0.5">{isAdmin ? 'Nuevo' : 'Solicitar'}</span>
         </button>
 
-        {user.role === 'admin' && (
+        {isAdmin && (
+          <button
+            onClick={() => setIsPendingRequestsOpen(true)}
+            className="flex flex-col items-center py-1 px-2 text-slate-400 hover:text-amber-400 relative"
+            title="Solicitudes Pendientes"
+          >
+            <span className="text-lg">📋</span>
+            {pendingRequestsCount > 0 && (
+              <span className="absolute top-0 right-1 px-1.5 py-0.2 bg-amber-500 text-slate-950 text-[9px] font-black rounded-full">
+                {pendingRequestsCount}
+              </span>
+            )}
+            <span className="text-[10px] mt-0.5">Solicitudes</span>
+          </button>
+        )}
+
+        {isAdmin && (
           <button
             onClick={() => setIsUserManagementOpen(true)}
-            className="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-emerald-500"
+            className="flex flex-col items-center py-1 px-2 text-slate-400 hover:text-emerald-500"
           >
             <span className="text-lg">👥</span>
             <span className="text-[10px] mt-0.5">Personal</span>
@@ -1003,8 +1204,18 @@ const App: React.FC = () => {
         isOpen={isModalOpen} 
         onClose={() => setIsModalOpen(false)} 
         onSave={handleSaveContact} 
+        onSubmitRequest={handleSubmitContactRequest}
         initialData={currentContact} 
         darkMode={darkMode} 
+        user={user}
+      />
+
+      <PendingRequestsModal 
+        isOpen={isPendingRequestsOpen}
+        onClose={() => setIsPendingRequestsOpen(false)}
+        requests={contactRequests}
+        user={user}
+        darkMode={darkMode}
       />
 
       <QRModal 
