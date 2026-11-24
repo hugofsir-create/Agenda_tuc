@@ -525,11 +525,12 @@ const App: React.FC = () => {
         darkMode ? 'bg-[#0a0b0b]/90 border-slate-800' : 'bg-white/90 border-slate-200 shadow-sm'
       }`}>
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold shadow-md shadow-emerald-600/30 overflow-hidden p-0.5">
+          <div className="w-8 h-8 rounded-xl shadow-md shadow-emerald-600/30 overflow-hidden border border-emerald-500/30 shrink-0">
             <img
-              src="/truck-app-icon.svg"
-              alt="Camión Logitrack"
-              className="w-full h-full object-contain"
+              src="/apple-touch-icon.png?v=3"
+              alt="Logo Logitrack Calico"
+              referrerPolicy="no-referrer"
+              className="w-full h-full object-cover"
             />
           </div>
           <div>

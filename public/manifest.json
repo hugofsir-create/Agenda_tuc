@@ -1,18 +1,38 @@
 {
-  "short_name": "Logitrack Calico",
+  "short_name": "Logitrack",
   "name": "Logitrack Calico - Chofer Móvil",
   "description": "App de logística y guiado GPS satelital de Calico S.A. para choferes y administración.",
-  "icons": [
-    {
-      "src": "/truck-app-icon.svg",
-      "type": "image/svg+xml",
-      "sizes": "192x192 512x512 any",
-      "purpose": "any maskable"
-    }
-  ],
+  "id": "/",
   "start_url": "/?mobile=true",
+  "scope": "/",
   "background_color": "#0a0b0b",
   "theme_color": "#10b981",
   "display": "standalone",
-  "orientation": "portrait"
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/pwa-192x192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-512x512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-maskable-512x512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "type": "image/png",
+      "sizes": "180x180",
+      "purpose": "any"
+    }
+  ]
 }
