@@ -40,8 +40,15 @@ const App: React.FC = () => {
     return false;
   });
 
-  // PWA install prompt handler
+  // PWA install prompt & standalone state handler
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [isPWAInstalled, setIsPWAInstalled] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return (
+      window.matchMedia('(display-mode: standalone)').matches ||
+      (window.navigator as unknown as { standalone?: boolean }).standalone === true
+    );
+  });
 
   // Role checks
   const isAdmin = user?.role === 'admin';
@@ -155,14 +162,22 @@ const App: React.FC = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, [viewMode]);
 
-  // PWA beforeinstallprompt handler
+  // PWA beforeinstallprompt & appinstalled handler
   useEffect(() => {
     const handleBeforeInstall = (e: any) => {
       e.preventDefault();
       setDeferredPrompt(e);
     };
+    const handleAppInstalled = () => {
+      setIsPWAInstalled(true);
+      setDeferredPrompt(null);
+    };
     window.addEventListener('beforeinstallprompt', handleBeforeInstall);
-    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+    window.addEventListener('appinstalled', handleAppInstalled);
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+      window.removeEventListener('appinstalled', handleAppInstalled);
+    };
   }, []);
 
   const handlePromptInstall = async () => {
@@ -527,7 +542,7 @@ const App: React.FC = () => {
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-xl shadow-md shadow-emerald-600/30 overflow-hidden border border-emerald-500/30 shrink-0">
             <img
-              src="/apple-touch-icon.png?v=3"
+              src="/apple-touch-icon.png?v=4"
               alt="Logo Logitrack Calico"
               referrerPolicy="no-referrer"
               className="w-full h-full object-cover"
@@ -571,14 +586,16 @@ const App: React.FC = () => {
             </button>
           )}
 
-          <button 
-            onClick={() => setIsInstallModalOpen(true)}
-            className="px-2.5 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-bold text-xs flex items-center gap-1 shadow-sm active:scale-95 transition-transform"
-            title="Instalar en Celular / Código QR"
-          >
-            <span>📲</span>
-            <span className="text-[11px] font-black">Instalar</span>
-          </button>
+          {!isPWAInstalled && (
+            <button 
+              onClick={() => setIsInstallModalOpen(true)}
+              className="px-2.5 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-bold text-xs flex items-center gap-1 shadow-sm active:scale-95 transition-transform"
+              title="Instalar en Celular / Código QR"
+            >
+              <span>📲</span>
+              <span className="text-[11px] font-black">Instalar</span>
+            </button>
+          )}
           <button 
             onClick={toggleTheme}
             className={`p-2 rounded-xl border text-xs ${darkMode ? 'bg-slate-900 border-slate-800 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-600'}`}

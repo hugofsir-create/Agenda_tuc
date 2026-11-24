@@ -1,5 +1,6 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
+import { registerSW } from 'virtual:pwa-register';
 import App from './App';
 import './index.css';
 
@@ -13,11 +14,5 @@ if (container) {
   );
 }
 
-// Register service worker for PWA offline caching & mobile installability
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch((err) => {
-      console.log('SW registration note:', err);
-    });
-  });
-}
+// Register VitePWA service worker for offline support & mobile installability
+registerSW({ immediate: true });

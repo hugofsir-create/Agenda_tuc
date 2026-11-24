@@ -56,7 +56,7 @@ const InstallAppModal: React.FC<InstallAppModalProps> = ({
         }`}>
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 rounded-2xl shadow-lg shadow-emerald-600/30 overflow-hidden border border-emerald-500/30 shrink-0">
-              <img src="/apple-touch-icon.png?v=3" alt="Logo Logitrack Calico Móvil" referrerPolicy="no-referrer" className="w-full h-full object-cover" />
+              <img src="/apple-touch-icon.png?v=4" alt="Logo Logitrack Calico Móvil" referrerPolicy="no-referrer" className="w-full h-full object-cover" />
             </div>
             <div>
               <h3 className="text-lg font-black tracking-tight leading-tight">
@@ -86,7 +86,7 @@ const InstallAppModal: React.FC<InstallAppModalProps> = ({
             darkMode ? 'bg-slate-950/80 border-slate-800' : 'bg-slate-50 border-slate-200'
           }`}>
             <img 
-              src="/apple-touch-icon.png?v=3" 
+              src="/apple-touch-icon.png?v=4" 
               alt="Icono Móvil Logitrack Calico" 
               referrerPolicy="no-referrer"
               className="w-12 h-12 rounded-2xl shadow-lg border border-emerald-500/30 shrink-0 object-cover"

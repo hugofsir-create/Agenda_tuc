@@ -6,7 +6,7 @@
   "start_url": "/?mobile=true",
   "scope": "/",
   "background_color": "#0a0b0b",
-  "theme_color": "#10b981",
+  "theme_color": "#059669",
   "display": "standalone",
   "orientation": "portrait",
   "icons": [
@@ -27,12 +27,6 @@
       "type": "image/png",
       "sizes": "512x512",
       "purpose": "maskable"
-    },
-    {
-      "src": "/apple-touch-icon.png",
-      "type": "image/png",
-      "sizes": "180x180",
-      "purpose": "any"
     }
   ]
 }

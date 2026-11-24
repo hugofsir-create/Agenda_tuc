@@ -103,7 +103,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ darkMode, onLoginSuccess, onO
           {/* Mobile Icon (Camión Logitrack) */}
           <div className="inline-flex md:hidden items-center justify-center w-20 h-20 rounded-3xl shadow-xl shadow-emerald-600/30 mb-4 overflow-hidden border border-emerald-500/30 transform hover:scale-105 transition-transform">
             <img
-              src="/apple-touch-icon.png?v=3"
+              src="/apple-touch-icon.png?v=4"
               alt="Logo Logitrack Calico Móvil"
               referrerPolicy="no-referrer"
               className="w-full h-full object-cover"
